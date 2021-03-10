@@ -1,0 +1,11 @@
+name = api_emploi
+description = Integration de l'API de pole emploi
+package = public-action
+version = VERSION
+core = 7.x
+files[] = api_emploi.module
+
+; Information added by drupal.org packaging script on 2010-03-21
+version = "1.0"
+project = "drupal"
+datestamp = "1606901623"
