@@ -64,13 +64,6 @@ function api_emploi_menu() {
     'page callback' => 'api_emploi_one',
   );
 
-  $items['api_emploi_map'] = array(
-    'title' => 'Widget Pole Emploi',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK, 
-    'page callback' => 'api_emploi_map',
-  );
-
   $items['api_emploi_total'] = array(
     'title' => 'API EMPLOI TOTAL',
     'access arguments' => array('access content'),
@@ -78,19 +71,6 @@ function api_emploi_menu() {
     'page callback' => 'api_emploi_total',
   );
 
-  $items['api_emploi_redirect'] = array(
-    'title' => 'RESULTAT DE VOTRE RECHERCHE',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK, 
-    'page callback' => 'api_emploi_redirect',
-  );
-
-  $items['api_emploi_lbb'] = array(
-    'title' => 'La bonne boite',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK, 
-    'page callback' => 'api_emploi_lbb',
-  );
 
   $items['admin/config/system/api_emploi'] = array(
     'title' => t('Configuration de l\'API Pole emploi'),
@@ -142,22 +122,12 @@ function api_emploi_admin_settings(){
     '#default_value' => variable_get('api_emploi_module_url','Activated modules'), 
   );
 
-  $form['api_emploi_module_bb'] = array(
-    '#type' => 'textfield',
-    '#title' => t('URL La bonne boite'),
-    '#description' => t('URL du module emploi de l\'API La bonne boite'),
-    '#default_value' => variable_get('api_emploi_module_bb','Activated modules'), 
-  );
-
   $form['api_emploi_module_limit'] = array(
     '#type' => 'textfield',
     '#title' => t('Limite d\'offre'),
     '#description' => t('Limite du nombre d\'offre d\'emploi' ),
     '#default_value' => variable_get('api_emploi_limit','30'), 
   );
-
-
-
 
   return system_settings_form($form);
 }
@@ -174,8 +144,8 @@ function api_emploi_block_info() {
     'info' => 'Rechercher une offre',
   );
 
-  $block['api_lbb_recherche'] = array(
-    'info' => 'Les secteurs qui recrutent',
+  $block['api_emploi_resultat'] = array(
+    'info' => 'Résultat de la recherche',
   );
 
   return $block;
@@ -199,11 +169,6 @@ function api_emploi_block_view($delta) {
       $block['content'] = api_emploi_query();
       return $block;
       break;
-    case  'api_lbb_recherche':
-      $block['subject'] = t('Les entreprises qui recrutent');
-      $block['content'] = api_lbb_query();
-      return $block;
-      break;
 
 }
 }
@@ -217,15 +182,13 @@ function api_emploi_block_view($delta) {
 
 /**
 * creation des liens permettant d'obtenir le token d'accès à partir des informations de compte de l'utilisateur du site pole emploi
-* $api = l'url de l'api correspondant (offre d'emploi (valeur 'oe') ou ma bonne boite (valeur 'bb'))
 */
-function token_url_creator($api)
+function token_url_creator()
 {
   $base_url = variable_get('api_emploi_module_token');
   $token_url = $base_url . "client_secret=" . variable_get('api_emploi_module_secret');
   $token_url .= "&client_id=" . variable_get('api_emploi_module_user') . "&grant_type=client_credentials&scope=";
-    if($api == 'oe'){$token_url.= "application_" . variable_get('api_emploi_module_user') . "%20api_offresdemploiv2%20o2dsoffre&realm=/partenaire";}
-    elseif($api == 'bb'){$token_url .= "application_" . variable_get('api_emploi_module_user') . "%20api_labonneboitev1&realm=/partenaire";}
+  $token_url.= "application_" . variable_get('api_emploi_module_user') . "%20api_offresdemploiv2%20o2dsoffre&realm=/partenaire";
 
   return $token_url;
 }
@@ -267,9 +230,8 @@ function getapitoken($url)
 /**
 * Extracteur de données JSON
 * Convertion des données JSON en tableaux PHP
-* API = Choix du type d'API ('oe' => offres d'emploi / 'bb' => bonne boite)
 */
-function extract_Json($url, $api){
+function extract_Json($url){
 
 
   $curl = curl_init();
@@ -286,7 +248,7 @@ function extract_Json($url, $api){
     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
     CURLOPT_CUSTOMREQUEST => 'GET',
     CURLOPT_HTTPHEADER => array(
-      'Authorization: Bearer ' . getapitoken(token_url_creator($api))
+      'Authorization: Bearer ' . getapitoken(token_url_creator())
     ),
   ));
   
@@ -411,12 +373,168 @@ function liste_distance(){
   return $distance;
 }
 
+
+function liste_contrat(){
+  $contrat = array(
+    '0' => 'Toutes les offres',
+    'CDI' => 'Contrat à durée indéterminée',
+    'CDD' => 'Contrat à durée déterminée',
+    'MIS' => 'Mission Intérimaire',
+    'SAI' => 'Saisonnier',
+    'FS' => 'Contrat de professionnalisation',
+    'E2' => 'Contrat d\'apprentissage',
+    
+  );
+  return $contrat;
+}
+
+function liste_duree(){
+  $duree = array(
+    'X' => 'Toutes les offres',
+    'true' => 'Temps plein',
+    'false' => 'Temps partiel',
+  );
+  return $duree;
+}
+
+function liste_experience(){
+  $experience = array(
+    '0' => 'Toutes les offres',
+    '1' => '1 an',
+    '2' => '1 à 3 ans',
+    '3' => 'Plus de 3 ans',
+  );
+  return $experience;
+}
+
+function liste_qualification(){
+  $experience = array(
+    '1' => 'Toutes les offres',
+    '9' => 'Cadre',
+    '0' => 'Non cadre',
+  );
+  return $experience;
+}
+
+function liste_date(){
+  $date = array(
+    '0' => 'Toutes les offres',
+    '1' => '1 jour',
+    '3' => '3 jours',
+    '7' => '1 semaine',
+    '14' => '2 semaine',
+    '31' => '1 mois',
+  );
+  return $date;
+}
+
 /**
  * **********************************************************************************************************************************
  * API OFFRE D'EMPLOI
  * Récupération des annonces du site de Pole Emploi
  * **********************************************************************************************************************************
  */
+/**
+* Formulaire de recherche
+*/
+function api_emploi_form(){
+  $form['ville'] = array(
+  '#title' => 'Choisir une ville de la métropole',
+  '#type' => 'select',
+  '#options' => liste_ville(),
+  '#default_value' => array(34172 => "montpellier"),
+  );
+
+  $form['domaine'] = array(
+  '#title' => 'Choisir un domaine d\'activité',
+  '#type' => 'select',
+  '#options' => liste_domaines(),
+  '#default_value' => array(0 => "Tous domaines"),
+  );
+
+  $form['sort'] = array(
+  '#title' => 'Tri des données',
+  '#type' => 'select',
+  '#options' => liste_tri(),
+  '#default_value' => 1,
+  );
+
+  $form['distance'] = array(
+  '#title' => 'Distance du rayon de recherche',
+  '#type' => 'select',
+  '#options' => liste_distance(),
+  '#default_value' => 5,
+  );
+
+  $form['contrat'] = array(
+  '#title' => 'Choisir un type de contrat',
+  '#type' => 'select',
+  '#options' => liste_contrat(),
+  '#default_value' => array(0 => "Toutes les offres"),
+  );
+      
+  $form['duree'] = array(
+  '#title' => 'Choisir une durée hebdomadaire',
+  '#type' => 'select',
+  '#options' => liste_duree(),
+  '#default_value' => array(0 => "Toutes les offres"),
+  );
+      
+  $form['experience'] = array(
+  '#title' => 'Expérience souhaitée',
+  '#type' => 'select',
+  '#options' => liste_experience(),
+  '#default_value' => array(4 => "Toutes les offres"),
+  );
+      
+  $form['qualification'] = array(
+  '#title' => 'Niveau de qualification',
+  '#type' => 'select',
+  '#options' => liste_qualification(),
+  '#default_value' => array(1 => "Toutes les offres"),
+  );
+      
+  $form['date'] = array(
+  '#title' => 'Date de publication',
+  '#type' => 'select',
+  '#options' => liste_date(),
+  '#default_value' => array(1 => "Toutes les offres"),
+  );
+  
+  $form['valider'] = array(
+  '#type' => 'submit',
+  '#value' => t('Soumettre'),
+  );
+
+
+  return $form;
+}
+
+/**
+*  * url : /api_emploi_query
+* Page d'affichage du formulaire de recherche
+*/
+function api_emploi_query(){  
+  return drupal_get_form('api_emploi_form');
+}
+
+/**
+* Récupération des éléments du formulaire
+*/
+function api_emploi_form_submit($form, &$form_state){
+  $form_state['redirect'] = array('api_emploi_result',array('query' => array(
+    'ville' => $form_state['values']['ville'], 
+    'grandDomaine' => $form_state['values']['domaine'],
+    'sort' => $form_state['values']['sort'],
+    'distance' => $form_state['values']['distance'],
+    'typeContrat' => $form_state['values']['contrat'],
+    'tempsPlein' => $form_state['values']['duree'],
+    'experience' => $form_state['values']['experience'],
+    'qualification' => $form_state['values']['qualification'],
+    'publieeDepuis' => $form_state['values']['date'],
+  )));
+}
+
 
 /**
 * Création de l'URL de requete pour les recherches d'emploi
@@ -424,9 +542,14 @@ function liste_distance(){
 */
 function url_request_creator(
   $ville = 'metropole', 
-  $domaine = '', 
+  $domaine = '0', 
   $sort = 1,
-  $distance = 5)
+  $distance = 25, 
+  $typeContrat = '0', 
+  $tempsPlein = 'X', 
+  $experience = 0, 
+  $qualification = 1, 
+  $publieeDepuis = 0)
   {
 
       $url = array();
@@ -436,7 +559,7 @@ function url_request_creator(
 
       if($ville == 'metropole')
       {
-        $criteres = 'commune=34172,34202,34058,34129,34123';
+        $criteres = 'commune=34172&distance=25';
       }
       else
       {
@@ -444,10 +567,11 @@ function url_request_creator(
         if($ville != 0)
         {
           $criteres = 'commune=' . $ville;
+          $criteres .= "&distance=" . $distance;
           
         }
         else{
-          $criteres = 'commune=34172,34202,34058,34129,34123';
+          $criteres = 'commune=34172&distance=25';
         }
         
       }
@@ -458,8 +582,30 @@ function url_request_creator(
         $query['domaine'] = $liste_domaines[$domaine];
       }
 
+      if($typeContrat != '0'){
+        if($typeContrat == 'FS' or $typeContrat == 'E2'){
+          $criteres .= "&natureContrat=" . $typeContrat;}
+        else{   
+          $criteres .= "&typeContrat=" . $typeContrat;}
+      }
+      
+      if($tempsPlein != 'X'){
+          $criteres .= "&tempsPlein=" . $tempsPlein;
+      } 
+      
+      if($experience != 0){
+        $criteres .= "&experience=" . $experience;
+      }
 
-      $criteres .= "&distance=" . $distance; 
+      if($qualification != 1){
+        $criteres .= "&qualification=" . $qualification;
+      }
+
+      if($publieeDepuis != 0){
+        $criteres .= "&publieeDepuis=" . $publieeDepuis;
+      }
+
+       
       $criteres .= "&sort=" . $sort; 
     
       $url_request  =  $base_url . $criteres;
@@ -471,13 +617,18 @@ function url_request_creator(
           $url_request  .= '&range=' . $x . '-' . $y;
       }      
 
+
       return $url_request = array(
         'url' => $url_request,
         'ville' => $ville,
         'domaine' => $domaine,
         'sort' => $sort,
         'distance' => $distance,
-
+        'typeContrat' => $typeContrat,
+        'tempsPlein' => $tempsPlein,
+        'experience' => $experience,
+        'qualification' => $qualification,
+        'publieeDepuis' => $publieeDepuis,
       );
 }
 
@@ -498,9 +649,9 @@ function getoffers($url, $page = 0)
     $url_query = $url['url'] . '&range=0-30';
   }
 
-    $extract = extract_Json($url_query, 'oe');
+    $extract = extract_Json($url_query);
 
-  $communes = liste_ville();
+    $communes = liste_ville();
 
     $query['offres'] = array();
 
@@ -512,33 +663,10 @@ function getoffers($url, $page = 0)
         foreach($extract['resultats'] as $o)
         {
 
+          // PERMET DE FILTER LES VILLES HORS METROPOLE -> A commenter si obsolète
           if(array_key_exists($o['lieuTravail']['commune'], $communes)){
-            if(isset($o['entreprise']['nom']))
-            {
-              $offer = array(
-                'id' => $o['id'],
-                'titre' => $o['appellationlibelle'],
-                'contrat' => $o['typeContrat'],
-                'ville' => $o['lieuTravail']['libelle'],
-                'description' => $o['description'],
-                'date' => $o['dateCreation'],
-                'entreprise' => $o['entreprise']['nom'],
-                'lien' => 'https://candidat.pole-emploi.fr/offres/recherche/detail/' . $o['id'],
-              );
-            }
-            else
-            {
-              $offer = array(
-                'id' =>  $o['id'],        
-                'titre' => $o['appellationlibelle'],
-                'contrat' => $o['typeContrat'],
-                'ville' => $o['lieuTravail']['libelle'],
-                'description' => $o['description'],
-                'date' => $o['dateCreation'],
-                'entreprise' => '<em>non renseignée</em>',
-                'lien' => 'https://candidat.pole-emploi.fr/offres/recherche/detail/' . $o['id'],
-              ); 
-            }
+
+            $offer = extractOffer($o);
             array_push($query['offres'], $offer);
             $compteur++;
 
@@ -561,6 +689,11 @@ function getoffers($url, $page = 0)
           'domaine' => $url['domaine'],
           'sort' => $url['sort'],
           'distance' => $url['distance'],
+          'typeContrat' => $url['typeContrat'],
+          'tempsPlein' => $url['tempsPlein'],
+          'experience' => $url['experience'],
+          'qualification' => $url['qualification'],
+          'publieeDepuis' => $url['publieeDepuis'],
           'nombre_offres' => $query['nombre'],
           'base_url' => current_path(),
         ); 
@@ -584,12 +717,100 @@ function getoffers($url, $page = 0)
      return $query;
 }
 
+function extractOffer($offre)
+{
 
+
+  if(isset($offre['intitule'])){$intitule = $offre['intitule'];}else{$intitule = '';}
+  if(isset($offre['dateCreation'])){$dateCreation = $offre['dateCreation'];}else{$dateCreation = '';}
+  if(isset($offre['dateActualisation'])){$dateActualisation = $offre['dateActualisation'];}else{$dateActualisation = '';}
+  if(isset($offre['lieuTravail']['libelle'])){$ville = $offre['lieuTravail']['libelle'];}else{$ville = '';}
+  if(isset($offre['appellationlibelle'])){$metier = $offre['appellationlibelle'];}else{$metier = '';}
+  if(isset($offre['entreprise']['nom'])){$entreprise = $offre['entreprise']['nom'];}else{$entreprise = '';}
+  if(isset($offre['typeContratLibelle'])){$contrat = $offre['typeContratLibelle'];}else{$contrat = '';}
+  if(isset($offre['natureContrat'])){$natureContrat = $offre['natureContrat'];}else{$natureContrat = '';}
+  if(isset($offre['experienceLibelle'])){$experience = $offre['experienceLibelle'];}else{$experience = '';}
+  if(isset($offre['salaire']['libelle'])){$salaire = $offre['salaire']['libelle'];}else{$salaire = '';}
+  if(isset($offre['description'])){$description = nl2br($offre['description']); }else{$description = '';}
+  if(isset($offre['origineOffre']['urlOrigine'])){$url = $offre['origineOffre']['urlOrigine']; }else{$url = 'https://candidat.pole-emploi.fr/offres/recherche/detail/' . $offre['id'];}
+  if(isset($offre['dureeTravailLibelle'])){$dureeTravail = $offre['dureeTravailLibelle']; }else{$dureeTravail  = '';}
+  if(isset($offre['lieuTravail']['latitude']) && isset($offre['lieuTravail']['longitude']))
+  {
+    $latitude = $offre['lieuTravail']['latitude'];
+    $longitude = $offre['lieuTravail']['longitude'];
+  }
+  else
+  {
+    $latitude = '';
+    $longitude = '';    
+  }
+  
+
+
+  return $offer = array(
+    'id' => $offre['id'],
+    'intitule' => $intitule,
+    'dateCreation' => $dateCreation,
+    'dateActualisation' => $dateActualisation,
+    'ville' => $ville,
+    'metier' => $metier,
+    'entreprise' => $entreprise,
+    'contrat' => $contrat,
+    'natureContrat' => $natureContrat,
+    'experience' => $experience,
+    'salaire' => $salaire,
+    'description' => $description,
+    'lien_pe' => $url,
+    'latitude' => $latitude,
+    'longitude' => $longitude,
+  );
+
+}
+
+
+/**
+* Page d'affichage du résultat de la recherche
+*/
+function api_emploi_result() {
+
+  if($_GET['ville'] == 0){$ville = "metropole";}else{$ville = $_GET['ville'];}
+  if(isset($_GET['grandDomaine'])){$domaine = $_GET['grandDomaine'];}
+  if(isset($_GET['sort'])){$sort = $_GET['sort'];}else{$sort = 1;}
+  if(isset($_GET['distance'])){$distance = $_GET['distance'];}else{$distance = 4;}
+  if(isset($_GET['typeContrat'])){$typeContrat = $_GET['typeContrat'];}else{$typeContrat = 0;}
+  if(isset($_GET['tempsPlein'])){$tempsPlein = $_GET['tempsPlein'];}else{$tempsPlein = 'X';}
+  if(isset($_GET['experience'])){$experience = $_GET['experience'];}else{$experience = 0;}
+  if(isset($_GET['qualification'])){$qualification = $_GET['qualification'];}else{$qualification = 1;}
+  if(isset($_GET['publieeDepuis'])){$publieeDepuis = $_GET['publieeDepuis'];}else{$publieeDepuis = 0;}
+
+  $url = url_request_creator($ville, $domaine, $sort, $distance, $typeContrat, $tempsPlein, $experience, $qualification, $publieeDepuis);  
+  if(isset($_GET['page'])){$page = $_GET['page'];}else{$page=0;}
+  $request = getoffers($url, $page);
+
+  if(!empty($request['offres']))
+  {
+    
+    if(!empty($request)){
+      $content['nombre'] = compter_emploi_ville($request);
+    }
+    else{
+      $content['nombre'] = 0;
+    }
+    return theme_api_emploi_paragraph($request);
+  }
+  else{
+    return not_found();
+  }
+
+
+
+  ;
+}
 
 
 /*
  * url : /api_emploi
- * Page de base
+ * Page de base : Les offres d'emploi dans la métropole de Montpellier
  * Récupération des offres des plus grandes communes de la metropole (5 communes max par requete)
  */
 function api_emploi_content() {
@@ -616,17 +837,16 @@ function api_navigation($parameters) {
 
   $nav = $parameters['base_url'];
 
-  if($parameters['base_url'] != 'api_emploi')
-  {
+
     $nav .= '?ville=' . $parameters['ville'];
     $nav .= '&grandDomaine=' . $parameters['domaine'];
     $nav .= '&sort=' . $parameters['sort'];
-    $nav .= '&distance=' . $parameters['sort'];
-  }
-  else{
-    $nav .= '?ville=' . $parameters['ville'];
-  }
-
+    $nav .= '&distance=' . $parameters['distance'];
+    $nav .= '&typeContrat=' . $parameters['typeContrat'];
+    $nav .= '&tempsPlein=' . $parameters['tempsPlein'];
+    $nav .= '&experience=' . $parameters['experience'];
+    $nav .= '&qualification=' . $parameters['qualification'];
+    $nav .= '&publieeDepuis=' . $parameters['publieeDepuis'];
 
 
 
@@ -645,25 +865,11 @@ function api_navigation($parameters) {
 function api_emploi_one() {
 
  $url = 'https://api.emploi-store.fr/partenaire/offresdemploi/v2/offres/' . $_GET['id'];
- $extract = extract_Json($url, 'oe');
+ $extract = extractOffer(extract_Json($url));
 
   return theme_api_emploi_one($extract);
 }
 
-function api_emploi_map(){
-
-  $token = getapitoken(token_url_creator('oe'));
-
-  $output = '';
-  $output .= '<pe-offres-emploi></pe-offres-emploi>';
-  $output .= '<script>';
-  $output .= "var macarte=document.querySelector('pe-offres-emploi');";
-  $output .= "macarte.options={rechercheAuto: false,},";
-  $output .= 'macarte.token = "' . $token . '";';
-  $output .= "</script>";
-
-  return $output;
-}
  /**
  * Affichage du resultat de la requete en liste
  */
@@ -694,98 +900,21 @@ function api_emploi_total() {
   return $total;
 }
 
+function url_creator(){
+  $url = '';
+  if(isset($_GET['page'])){ $url .= '?page=' . $_GET['page']; }else{$url .= '?page=0';}
+  if(isset($_GET['ville'])){ $url .= '&ville=' . $_GET['ville']; }
+  if(isset($_GET['grandDomaine'])){ $url .= '&grandDomaine=' . $_GET['grandDomaine']; }
+  if(isset($_GET['sort'])){ $url .= '&sort=' . $_GET['sort'];}
+  if(isset($_GET['distance'])){ $url .= '&distance=' . $_GET['distance']; }
+  if(isset($_GET['typeContrat'])){ $url .= '&typeContrat=' . $_GET['typeContrat']; }
+  if(isset($_GET['experience'])){ $url .= '&experience=' . $_GET['experience']; }
+  if(isset($_GET['qualification'])){ $url .= '&qualification=' . $_GET['qualification']; }
+  if(isset($_GET['publieeDepuis'])){ $url .= '&publieeDepuis=' . $_GET['publieeDepuis']; }
+  $url .= '&base_url=' . current_path();
+  return $url;
 
-/**
-* Page d'affichage du résultat de la recherche
-*/
-function api_emploi_result() {
-
-  if($_GET['ville'] == 0){$ville = "metropole";}else{$ville = $_GET['ville'];}
-  if(isset($_GET['grandDomaine'])){$domaine = $_GET['grandDomaine'];}
-  if(isset($_GET['sort'])){$sort = $_GET['sort'];}else{$sort = 1;}
-  if(isset($_GET['distance'])){$distance = $_GET['distance'];}else{$distance = 4;}
-  if(isset($_GET['page'])){$page = $_GET['page'];}else{$page=0;}
-
-  $url = url_request_creator($ville, $domaine, $sort, $distance);
-
-   
-  $request = getoffers($url, $page);
-
-
-  if(!empty($request['offres']))
-  {
-    
-    if(!empty($request)){
-      $content['nombre'] = compter_emploi_ville($request);
-    }
-    else{
-      $content['nombre'] = 0;
-    }
-    return theme_api_emploi_paragraph($request);
-
-
-
-  }
-  else{
-    return not_found();
-  }
-
-
-
-  ;
 }
-
-/**
-* Navigation dans les pages d'affichage du résultat de la recherche
-*/
-function api_emploi_redirect(){
-
-  if($_GET['ville'] == 0){$ville = "metropole";}else{$ville = $_GET['ville'];}
-  if(isset($_GET['grandDomaine'])){$domaine = $_GET['grandDomaine'];}
-  if(isset($_GET['sort'])){$sort = $_GET['sort'];}else{$sort = 1;}
-  if(isset($_GET['distance'])){$distance = $_GET['distance'];}else{$distance = 0;}
-  if(isset($_GET['page'])){$page = $_GET['page'];}else{$page=0;}
-  $url = url_request_creator($ville, $domaine, $sort, $distance);
-
-  $request = getoffers($url);
-
-
-  if(!empty($request['offres']))
-  {
-    if(!empty($request)){
-      $content['nombre'] = compter_emploi_ville($request);
-    }
-    else{
-      $content['nombre'] = 0;
-    }
-   // return theme_api_emploi_paragraph($request);
-  }
-  else{
-    return not_found();
-  }
-}
-
-/**
-*  * url : /api_emploi_query
-* Page d'affichage du formulaire de recherche
-*/
-function api_emploi_query(){  
-    return drupal_get_form('api_emploi_form');
-}
-
-
-/**
-* Redirection vers la page des résultats après validation du formulaire
-*/
-function api_emploi_form_submit($form, &$form_state){
-  $form_state['redirect'] = array('api_emploi_result',array('query' => array(
-    'ville' => $form_state['values']['ville'], 
-    'grandDomaine' => $form_state['values']['domaine'],
-    'sort' => $form_state['values']['sort'],
-    'distance' => $form_state['values']['distance'],
-  )));
-}
-
 
 
  /**
@@ -795,25 +924,20 @@ function convert_table($o){
 
   $description = substr($o['description'],0,150);
 
-  $url = '';
-  if(isset($_GET['page'])){ $url .= '&page=' . $_GET['page']; }
-  if(isset($_GET['ville'])){ $url .= '&ville=' . $_GET['ville']; }
-  if(isset($_GET['grandDomaine'])){ $url .= '&grandDomaine=' . $_GET['grandDomaine']; }
+  $url = url_creator();
 
-
-  $pre_date = date_create($o['date']);
+  $pre_date = date_create($o['dateCreation']);
   $date = date_format($pre_date, 'd-m-Y');
 
   $output = "<tr>";
   $output .= "<td>" . $date . "</td>";
-  $output .= "<td>" . $o['titre'] . "</td>";
+  $output .= "<td>" . $o['intitule'] . "</td>";
   $output .= "<td>" . $o['ville'] . "</td>";
+  if(empty($o['entreprise'])){$o['entreprise'] = '<em>Non renseigné</em>'; }
   $output .= "<td>" . $o['entreprise'] . "</td>";
   $output .= "<td>" . $description . " (...) </td>";
   $output .= '<td><a href="api_emploi_one?id=' . $o['id'] . $url .'">Voir l\'offre</a></td>';
   $output .= "</tr>";
-
-
 
   return $output;
 }
@@ -844,7 +968,7 @@ function get_total_offres_metropole(){
     $url = array();
     $url = variable_get('api_emploi_module_url') . "&commune=" . $k . "&distance=0&range=0-1";
 
-    $extract = extract_Json($url, 'oe');
+    $extract = extract_Json($url);
 
     if(!empty($extract['filtresPossibles'])){
       $total_ville = compter_emploi_ville($extract['filtresPossibles'][0]['agregation']);
@@ -856,55 +980,8 @@ function get_total_offres_metropole(){
 }
 
 /**
-* Formulaire de recherche
-*/
-function api_emploi_form(){
-  $form['ville'] = array(
-  '#title' => 'Choisir une ville de la métropole',
-  '#type' => 'select',
-  '#options' => liste_ville(),
-  '#default_value' => array(34172 => "montpellier"),
-  );
-
-  $form['domaine'] = array(
-    '#title' => 'Choisir un domaine d\'activité',
-    '#type' => 'select',
-    '#options' => liste_domaines(),
-    '#default_value' => array(0 => "Tous domaines"),
-    );
-
-  $form['sort'] = array(
-      '#title' => 'Tri des données',
-      '#type' => 'select',
-      '#options' => liste_tri(),
-      '#default_value' => 1,
-      );
-
-  $form['distance'] = array(
-        '#title' => 'Distance du rayon de recherche',
-        '#type' => 'select',
-        '#options' => liste_distance(),
-        '#default_value' => 5,
-        );
-  
-  $form['valider'] = array(
-  '#type' => 'submit',
-  '#value' => t('Soumettre'),
-  );
-
-
-  return $form;
-}
-
-
-
-
-
-
-/**
  * PARTIE TEMPLATE
  */
-
 
 /**
  * Implementation of hook_theme
@@ -926,15 +1003,6 @@ function theme_one_offer($variables) {
   $output .= '<p>'.$variable['content'].'</p>';
   return $output;
 }
-
-
-
-
-
-
-
-
-
 
 
 /**
@@ -959,22 +1027,46 @@ function theme_api_emploi_paragraph($variables) {
 
      
         $liste_domaines = liste_domaines();
-        $req_domaine = $liste_domaines[$variables['parameters']['domaine']];
-
         $liste_distance = liste_distance();
-        $req_distance = $liste_distance[$variables['parameters']['distance']];
         $liste_tri = liste_tri();
-        $req_tri = $liste_tri[$variables['parameters']['sort']];
+        $liste_contrat = liste_contrat();
+
+        if($variables['parameters']['tempsPlein'] == 1){ $req_tempsPlein = 'Temps Plein'; }
+        elseif($variables['parameters']['tempsPlein'] == 0){$req_tempsPlein = 'Temps Partiel';}
+        elseif($variables['parameters']['tempsPlein'] == "X"){$req_tempsPlein = '';}
+        
+        $liste_experience = liste_experience();
+        $liste_qualification = liste_qualification();
+
+        
 
 
     
         $output .= '<h4>Votre recherche :</h4>';
         $output .=  '<ul>';
         $output .=  '<li>Ville : ' . $req_ville . '</li>';
-        $output .=  '<li>Domaine : ' . $req_domaine . '</li>';
-        $output .=  '<li>Trier par : ' . $req_tri . '</li>';
-        $output .=  '<li>Air de recherche : ' . $req_distance . '</li>';
-        $output .=  '<li>Résultat : <b>' . $variables['parameters']['nombre_offres'] . '</b></li>';
+        if($variables['parameters']['domaine']  != 0){
+          $output .=  '<li>Domaine : ' . $liste_domaines[$variables['parameters']['domaine']] . '</li>';
+        }
+        if($variables['parameters']['typeContrat'] != '0'){
+          $output .=  '<li>Type de contrat : ' . $liste_contrat[$variables['parameters']['typeContrat']] . '</li>';
+        }
+        if($variables['parameters']['tempsPlein'] != 'X'){
+          $output .=  '<li>Durée de travail : ' . $req_tempsPlein . '</li>';
+        }
+
+        if($variables['parameters']['experience'] != 0){
+          $output .=  '<li>Expérience éxigée : ' . $liste_experience[$variables['parameters']['experience']] . '</li>';
+        }
+
+        if($variables['parameters']['qualification'] != 1){
+          $output .=  '<li>Qualification : ' . $liste_qualification[$variables['parameters']['qualification']] . '</li>';
+        }
+
+
+        $output .=  '<li>Trier par : ' . $liste_tri[$variables['parameters']['sort']] . '</li>';
+        $output .=  '<li>Air de recherche : ' . $liste_distance[$variables['parameters']['distance']] . '</li>';
+        $output .=  '<li>Nombre d\'offre correspondant à votre recherche : Résultat : <b>' . $variables['parameters']['nombre_offres'] . '</b></li>';
         $output .=  '</ul>';
 
 
@@ -1034,174 +1126,71 @@ function theme_api_emploi_paragraph($variables) {
 
 
  /**
- * Affichage du resultat de la requete en tableau
- */
-function theme_api_emploi_table($variables) {
-
-
-
-
-  if(!empty($variables['offres']))
-    {  
-        $output = "";
-
-		if(!isset($variables['domaine']) AND isset($variables['ville']))
-		{
-		  $output .= '<h5>Nombre d\'emploi sur la ville de ' . $variables['ville'] . ' : ' .$variables['nombre'] . '</h5>';
-		}
-		elseif(isset($variables['domaine']) AND !isset($variables['ville']))
-		{
-		$output .= '<h5>Nombre d\'emploi sur la metropole de montpellier dans le domaine ' . $variables['domaine'] . ' : ' .$variables['nombre'] . '</h5>';
-		}
-		else
-		{
-			$output .= '<h5>'.$variables['nombre']  . ' offres d\'emploi dans le domaine ' . $variables['domaine'] . ' à ' . $variables['ville'] .'</h5>';
-		}
-
-		
-		if($variables['nombre'] > 30)
-		{
-			if(isset($_GET['page']))
-			{
-        $suivante = $x + 30;
-        $precedent = $x - 30;
-        if($_GET['page'] >= 30)
-        {
-          $output .= '<a href="api_emploi_result?ville='. $_GET['ville'] .'&grandDomaine='. $_GET['grandDomaine'] . '&page=0">Retour</a> | ';
-          $output .= '<a href="api_emploi_result?ville='. $_GET['ville'] .'&grandDomaine='. $_GET['grandDomaine'] . '&page=' . $precedent . '">Page Précédente</a> | ';
-        }
-				
-			}
-			else
-			{
-				$suivante = $x + 30;
-			}
-      if($suivante <= $variables['nombre'])
-      {
-        $output .= '<a href="api_emploi_result?ville='. $_GET['ville'] .'&grandDomaine='. $_GET['grandDomaine'] . '&page=' . $suivante . '">Page Suivante</a>';
-      }
-			
-			
-		}
-		$output .= '<p></p><a href="api_emploi_query">Nouvelle recherche</a></p>';
-		
-    }
-    else
-	{
-      $output = "Aucune offre dans ces critères";
-    }
-    $output .= "<table>
-    <tr>
-            <th>ID</th>
-            <th>Désignation</th>
-            <th>Ville</th>
-            <th>Entreprise</th>
-            <th>Description</th>
-            <th>Lien</th>
-    </tr>";
-
-    foreach($variables['offres'] as $o)
-    {
-        $output .= convert_table($o);
-    }
-
-    $output .= "</table>";
-    
-  return $output;
-}
-
-
-
-
-
-
-
-
-
-
- /**
  * Affichage d'une offre
  */
 function theme_api_emploi_one($offre)
 {
 
-  if(isset($_GET['grandDomaine']))
-  {
-    $domaine = $_GET['grandDomaine'];
-  }
-  else
-  {
-    $domaine = 0;
-  }
 
-  // url_creator : Permet de récupérer l'url de la page précédente
-  // A FAIRE RAJOUTER SORT & DISTANCE PUIS VALEUR PAR DEFAUT
-  if(!isset($_GET['ville']) && !isset($_GET['grandDomaine']))
-  {
-    $url_creator = "api_emploi";
-    if(isset($_GET['page'])){ 
-      $url_creator .= '?page=' . $_GET['page']; 
-    }
-  }
-  else
-  {
-    $url_creator = 'api_emploi_result?&ville=' . $_GET['ville'] . '&grandDomaine=' . $domaine;
-    if(isset($_GET['page'])){ 
-      $url_creator .= '&page=' . $_GET['page']; 
-    }
-  }
-
-  if(isset($_GET['sort'])){
-    $url_creator .= '&sort=' . $_GET['sort'];
-  }
-
-  if(isset($_GET['distance'])){
-    $url_creator .= '&distance=' . $_GET['distance'];
-  }
-
-  $token = getapitoken(token_url_creator('oe'));
+  $url = $_GET['base_url'] . url_creator();
+  $token = getapitoken(token_url_creator());
 
   $output = '<h1>' . $offre['intitule'] . '</h1>';
-  if(isset($offre['entreprise']['nom']))
+  if(!empty($offre['entreprise']))
   {
-    $output .= '<h2>Entreprise : ' . $offre['entreprise']['nom'] .  '</h2>';
+    $output .= '<h2>Entreprise : ' . $offre['entreprise'] .  '</h2>';
   }
+
+  if(!empty($offre['metier'])){
+    $output .= '<h3>' . $offre['metier'] .  '</h3>';
+
+  }
+
   $output .= '<ul>';
   $date = date_create($offre['dateActualisation']);
   $output .= '<li>Date de l\'annonce : ' . date_format($date, 'd-m-Y') . '</li>';
 
-  if(isset($offre['lieuTravail']))
+  if(!empty($offre['lieuTravail']))
   {
-  $output .= '<li> Lieu de travail : ' . $offre['lieuTravail']['libelle'] . '</li>';
+  $output .= '<li> Lieu de travail : ' . $offre['ville'] . '</li>';
   }
 
 
-  if(isset($offre['typeContrat']))
-  {
-  $output .= '<li>Type de contrat : ' . $offre['typeContrat'] . ' / ' . $offre['typeContratLibelle'] . '</li>';
+  if(!empty($offre['contrat'])){
+  $output .= '<li>Type de contrat : ' . $offre['natureContrat'] . ' / '  .$offre['contrat'] .'</li>';  
   }
 
+  if(!empty($offre['dureeTravailLibelle'])){
+    $output .= '<li>Durée de travail : ' . $offre['dureeTravailLibelle'] . '</li>';
+  }
 
-  if(isset($offre['dureeTravailLibelle'])){$output .= '<li>Durée de travail : ' . $offre['dureeTravailLibelle'] . '</li>';}
+  if(!empty($offre['experience'])){
+    $output .= '<li>Experience requise : ' . $offre['experience'] . '</li>';
+  }
+
+  if(!empty($offre['salaire'])){
+    $output .= '<li>Salaire : ' . $offre['salaire'] . '</li>';
+  }
+
   $output .= '</ul>';
-  $output .= '<a href="' . $url_creator . '">Retour</a> | ';
-  $output .= '<a href="https://candidat.pole-emploi.fr/offres/recherche/detail/' .  $offre['id'] . '" target="_blank">Postulez sur le site de Pôle Emploi</a>';
+  $output .= '<a href="' . $url . '">Retour</a> | ';
+  $output .= '<a href="' . $offre['lien_pe'] . '" target="_blank">Postulez sur le site de Pôle Emploi</a>';
   $output .= '<hr />';
 
   $output .= '<p>' . $offre['description'] .'</p>';
   $output .= '<hr />';
 
-
-  if(isset($offre['lieuTravail']['latitude']) && isset($offre['lieuTravail']['longitude']))
+  // AFFICHAGE DE LA CARTE GOOGLE MAP (attention API KEY propriétaire)
+  if(!empty($offre['latitude']) && !empty($offre['longitude']))
   {
     $output .= '<iframe ';
     $output .=   'width="600"';
     $output .=   'height="400"';
     $output .=   'frameborder="0" style="border:0"';
     $output .=   'src="https://www.google.com/maps/embed/v1/place?key=AIzaSyB0X4kJMOTDHqCa9MJ6zSBTBJNET0opM4w';
-    $output .=  '&center=' . $offre['lieuTravail']['latitude'] .  ',' . $offre['lieuTravail']['longitude'];
+    $output .=  '&center=' . $offre['latitude'] .  ',' . $offre['longitude'];
     $output .=  '&zoom=12';
-    $output .=  '&q=' . $offre['lieuTravail']['libelle'];
+    $output .=  '&q=' . $offre['ville'];
     $output .= '" allowfullscreen>';
     $output .= '</iframe>';
   }
@@ -1215,306 +1204,7 @@ function theme_api_emploi_one($offre)
 
 
 
- /**
- * API LA BONNE BOITE POLE EMPLOI
- * 
- */
 
- /**
-* creation du lien permettant d'obtenir le token d'accès à partir des informations de compte de l'utilisateur du site pole emploi
-*/
 
-function token_url_lbb_creator()
-{
 
-  $base_url = variable_get('api_emploi_module_token');
-  $token_url = $base_url . "client_secret=" . variable_get('api_emploi_module_secret');
-  $token_url = $token_url . "&client_id=" . variable_get('api_emploi_module_user') . "&grant_type=client_credentials&scope=";
-  $token_url = $token_url . "application_" . variable_get('api_emploi_module_user') . "%20api_labonneboitev1&realm=/partenaire";
 
-  return $token_url;
-}
-
-
-function token_url_rome_creator()
-{
-
-  $base_url = variable_get('api_emploi_module_token');
-  $token_url = $base_url . "client_secret=" . variable_get('api_emploi_module_secret');
-  $token_url = $token_url . "&client_id=" . variable_get('api_emploi_module_user') . "&grant_type=client_credentials&scope=";
-  $token_url = $token_url . "application_" . variable_get('api_emploi_module_user') . "%20api_romev1&realm=/partenaire";
-
-  return $token_url;
-}
-
-
-/**
-*  * block : 
-* Page d'affichage du formulaire de recherche
-*/
-function api_lbb_query()
-{  
-    return drupal_get_form('api_lbb_form');
-}
-
-function api_emploi_lbb(){
-    
-  if(!isset($_GET['page'])){
-    $page = 1;
-  }
-  else{
-    $page = $_GET['page'];
-  };
-
-  if(isset($_GET['metier']) && !empty($extract['companies']))
-  {
-
-    $content['text'] = "Votre recherche : " . $_GET['metier'];
-    $url_lbb = "https://api.emploi-store.fr/partenaire/labonneboite/v1/company/?";
-    $url = $url_lbb . 'commune_id=34172&rome_codes_keyword_search=' . $_GET['metier']  . '&page=' . $page;
-    $extract = extract_lbb_Json($url);
-
-    $entreprises = $extract['companies'];
-    $content['nombre_entreprises'] = $extract['companies_count'];
-    $content['code_rome'] = $extract['rome_code'];
-    $content['code_label'] = $extract['rome_label'];
-    $content['entreprises'] = array();
-
-    $data['metier'] = $_GET['metier'];
-    $data['page'] = $page;
-    $data['total'] = $extract['companies_count'];
-    $content['navigation'] = api_navigation_lbb($data);
-
-    foreach($entreprises as $e){
-      
-      $value = array();
-  
-      $value['adresse'] = 'non renseigné';
-      $value['contact_mode'] = 'non renseigné';
-      $value['ville'] = 'non renseigné';
-      $value['website'] = 'non renseigné';
-      $value['web_lbb'] = 'non renseigné';
-      $value['siret'] = 'non renseigné';
-
-      if(isset($e['name'])){$value['nom'] = $e['name'];}else{$value['nom'] = 'non renseigné';}
-      if(isset($e['addresse'])){$value['adresse'] = $e['addresse'];}else{$value['adresse'] = 'non renseigné';}
-      if(isset($e['contact_mode'])){$value['type_contact'] = $e['contact_mode'];}else{$value['type_contact'] = 'non renseigné';}
-      if(isset($e['city'])){$value['ville'] = $e['city'];}else{$value['ville'] = 'non renseignée';}
-      if(isset($e['website'])){$value['website'] = $e['website'];}else{$value['website'] = 'non renseigné';}
-      if(isset($e['headcount_text'])){$value['nombre_salarie'] = $e['headcount_text'];}else{$value['nombre_salarie'] = 'non renseigné';}
-      if(isset($e['siret'])){$value['siret'] = $e['siret'];}else{$value['siret'] = 'non renseigné';}
-
-      array_push($content['entreprises'], $value);
-
-    }
-
-    return theme_api_emploi_lbb($content);
-  }
-  elseif(empty($extract['companies'])  && isset($_GET['metier'])){
-    return 'Pas de résultat, essayez une nouvelle recherche';
-
-  }
-
-  return 'Recherchez un secteur qui recrute';
-  
-}
-
-
-function theme_api_emploi_lbb($content){
-
-
-  $output = '';
-
-  $output .= '<h4>Votre recherche : ' . $_GET['metier'] . '</h4>';
-
-  $output .= '<ul>';
-
-  $output .= '<li>Code Rome : ' .$content['code_rome']. '</li>'; 
-  
-  $output .= '<li>Désignation : ' .$content['code_label']. '</li>';
-  
-  $output .= '<li>Nombre d\'entreprises: ' .$content['nombre_entreprises']. '</li>';  
-
-  if(isset($_GET['page']))
-  {
-    $page = $_GET['page'];
-  }
-  else
-  {
-    $page = 1;
-  }
-
-
-  if($content['nombre_entreprises']  > 20){
-    $output .= '<ul>';
-    $i = 1;
-    foreach($content['navigation'] as $p){
-      $output .= '<li  style="display: inline; width = 5px;"><a href="'.$p .'"> ';
-      if($i == $page){ $output .= ' <b>';  }
-      $output .= $i;
-      if($i == $page){ $output .= ' </b>';  }
-      $output .= ' </a></li>';
-
-      $i++;
-    }
-    $output .= '</ul>'; 
-  }
-
-
-  $output .= '<hr />'; 
-
-  $output .= "<table>
-  <tr>
-          <th>Nom</th>
-          <th>Ville</th>
-          <th>Nombre de salariés</th>
-          <th>Adresse</th>
-          <th>Lien</th>
-  </tr>";
-
-
-  foreach($content['entreprises'] as $e){
-    
-
-    $output .= "<tr>";
-    $output  .= "<td>" . $e['nom'] . "</td>";
-    $output  .= "<td>" . $e['ville'] . "</td>";
-    $output .= "<td>" . $e['nombre_salarie'] . "</td>";
-    $output .= "<td>" . $e['adresse'] . "</td>";
-    $output .= "<td>" . $e['website'] . "</td>";
-    $output  .= "</tr>";
-
-  }
-
-  $output .= "</table>";
-
-
-
-return $output;
-
-
-}
-
-
-/**
-* Extracteur de données JSON
-*/
-function extract_lbb_Json($url){
-  $curl = curl_init();
-  curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-  curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-  
-  curl_setopt_array($curl, array(
-    CURLOPT_URL => $url,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'GET',
-    CURLOPT_HTTPHEADER => array(
-      'Authorization: Bearer ' . getapilbbtoken()
-    ),
-  ));
-  
-  $response = curl_exec($curl);
-  curl_close($curl);
-  $extract = json_decode($response, JSON_PRETTY_PRINT);
-
-  return $extract;
-}
-
-
-/**
-* Récupération du token sur le site de PE
-*/
-function getapilbbtoken()
-{
-  $url = token_url_lbb_creator();
-  $curl = curl_init();
-  curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-  curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-  curl_setopt_array($curl, array(
-    CURLOPT_URL => $url,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'POST',
-    CURLOPT_HTTPHEADER => array(
-      'Content-Type: application/x-www-form-urlencoded',
-    ),
-  ));
-  
-  $response = curl_exec($curl);
-  $err = curl_error($curl);
-  curl_close($curl);
-  $extract = json_decode($response, JSON_PRETTY_PRINT);
-
-  return $extract['access_token'];   
-
-}
-
-
-
-/**
-* Formulaire de recherche
-*/
-function api_lbb_form(){
-  $form['metier'] = array(
-  '#title' => 'Rechercher un métier ou secteur d\'activité',
-  '#type' => 'textfield',
-  );
-
-  
-  $form['valider'] = array(
-  '#type' => 'submit',
-  '#value' => t('Soumettre'),
-  );
-
-
-  return $form;
-}
-
-/**
-* Redirection vers la page des résultats après validation du formulaire
-*/
-function api_lbb_form_submit($form, &$form_state){
-  $form_state['redirect'] = array('api_emploi_lbb',array('query' => array(
-    'metier' => $form_state['values']['metier'], 
-  )));
-}
-
-
-/*
- * url : Création des pages de navigations dans les offres d'emplois
- */
-function api_navigation_lbb($parameters) {
-
-
-  $nombre = 20;
-  $total = ceil($parameters['total'] / $nombre);
-
-  $navigation = array();
-  $init = 1;
-
-  $nav = 'api_emploi_lbb';
-
-
-
-  $nav .= '?metier=' . $parameters['metier'];
-
-
-  while($init < $total and $init < 34)
-  {  
-    $nav_url = $nav . '&page=' . $init;
-    $init++;
-    array_push($navigation, $nav_url);
-  }
-
-
-   return $navigation;
-}
