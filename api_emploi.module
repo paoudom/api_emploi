@@ -950,8 +950,8 @@ function api_emploi_total() {
 }
 
 function url_creator(){
-  $url = '';
-  if(isset($_GET['page'])){ $url .= '?page=' . $_GET['page']; }else{$url .= '?page=0';}
+  $url = '?data=z';
+  if(isset($_GET['page'])){ $url .= '&page=' . $_GET['page']; }else{$url .= '?page=0';}
   if(isset($_GET['ville'])){ $url .= '&ville=' . $_GET['ville']; }
   if(isset($_GET['grandDomaine'])){ $url .= '&grandDomaine=' . $_GET['grandDomaine']; }
   if(isset($_GET['sort'])){ $url .= '&sort=' . $_GET['sort'];}
