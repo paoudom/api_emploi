@@ -37,7 +37,7 @@ function api_emploi_help($path, $arg) {
  */
 function api_emploi_menu() {
   $items['api_emploi'] = array(
-    'title' => 'API EMPLOI',
+    'title' => 'Offres d\'emploi Métropole Montpellier',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_content',
@@ -55,6 +55,20 @@ function api_emploi_menu() {
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_result',
+  );
+
+  $items['api_emploi_saisonnier'] = array(
+    'title' => 'Offres d\'emploi saisonniers',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK, 
+    'page callback' => 'api_emploi_saisonnier',
+  );
+
+  $items['api_emploi_formation'] = array(
+    'title' => 'Offres d\'emploi formation/alternance',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK, 
+    'page callback' => 'api_emploi_formation',
   );
 
   $items['api_emploi_one'] = array(
@@ -544,7 +558,7 @@ function url_request_creator(
   $ville = 'metropole', 
   $domaine = '0', 
   $sort = 1,
-  $distance = 25, 
+  $distance = 20, 
   $typeContrat = '0', 
   $tempsPlein = 'X', 
   $experience = 0, 
@@ -585,6 +599,10 @@ function url_request_creator(
       if($typeContrat != '0'){
         if($typeContrat == 'FS' or $typeContrat == 'E2'){
           $criteres .= "&natureContrat=" . $typeContrat;}
+        elseif($typeContrat == 'forma')
+        {
+          $criteres .= "&natureContrat=FS,E2";
+        }
         else{   
           $criteres .= "&typeContrat=" . $typeContrat;}
       }
@@ -664,13 +682,13 @@ function getoffers($url, $page = 0)
         {
 
           // PERMET DE FILTER LES VILLES HORS METROPOLE -> A commenter si obsolète
-          if(array_key_exists($o['lieuTravail']['commune'], $communes)){
+       //   if(array_key_exists($o['lieuTravail']['commune'], $communes)){
 
             $offer = extractOffer($o);
             array_push($query['offres'], $offer);
             $compteur++;
 
-          }
+      //    }
 
 
 
@@ -820,6 +838,37 @@ function api_emploi_content() {
    return theme_api_emploi_paragraph($request);
 }
 
+function api_emploi_saisonnier() {
+
+  $request = getoffers(url_request_creator(
+    $ville = 'metropole', 
+    $domaine = '0', 
+    $sort = 1,
+    $distance = 20, 
+    $typeContrat = 'SAI', 
+    $tempsPlein = 'X', 
+    $experience = 0, 
+    $qualification = 1, 
+    $publieeDepuis = 0
+  ));
+  return theme_api_emploi_paragraph($request);
+}
+
+function api_emploi_formation(){
+  $request = getoffers(url_request_creator(
+    $ville = 'metropole', 
+    $domaine = '0', 
+    $sort = 1,
+    $distance = 20, 
+    $typeContrat = 'forma', 
+    $tempsPlein = 'X', 
+    $experience = 0, 
+    $qualification = 1, 
+    $publieeDepuis = 0
+  ));
+  return theme_api_emploi_paragraph($request);
+}
+
 
 
 
@@ -928,15 +977,30 @@ function convert_table($o){
 
   $pre_date = date_create($o['dateCreation']);
   $date = date_format($pre_date, 'd-m-Y');
-
+  
   $output = "<tr>";
   $output .= "<td>" . $date . "</td>";
-  $output .= "<td>" . $o['intitule'] . "</td>";
+  $output .= '<td><ul style="list-style: none;">';
+  if(!empty($o['entreprise'])){
+    $output .= "<li>" . $o['entreprise'] . "</li>";
+  }
+  
+
+  $output .= "<li>" . $o['intitule'] . "</li>";
+  $output .= "<li>" . $o['natureContrat'] . "</li>";
+  $output .= "<li>" . $o['contrat'] . "</li>";
+
+  $output .= "</ul></td>";
+
+  /**
+  *
+  *$output .= "<td>" . $o['intitule'] . "</td>";
+  *$output .= "<td>" . $o['natureContrat'] . '<hr />'  . $o['contrat'] . "</td>";
+  *
+
+  **/
   $output .= "<td>" . $o['ville'] . "</td>";
-  if(empty($o['entreprise'])){$o['entreprise'] = '<em>Non renseigné</em>'; }
-  $output .= "<td>" . $o['entreprise'] . "</td>";
-  $output .= "<td>" . $description . " (...) </td>";
-  $output .= '<td><a href="api_emploi_one?id=' . $o['id'] . $url .'">Voir l\'offre</a></td>';
+  $output .= "<td><p>" . $description . " (...) </p>" .'<a style="margin-top: 5px;" href="api_emploi_one?id=' . $o['id'] . $url .'">Voir l\'offre</a>' . "</td>";
   $output .= "</tr>";
 
   return $output;
@@ -1014,9 +1078,13 @@ function theme_api_emploi_paragraph($variables) {
   { 
     $output = '';
 
+    if($variables['parameters']['base_url'] == 'api_emploi_saisonnier'){
+      $output .=  '<h3>Nombre d\'offre d\'emploi saisonnier sur la métropole : <b>' . $variables['parameters']['nombre_offres'] . '</b></h3>';
+    }
+
+
+
     if($variables['parameters']['base_url'] == 'api_emploi_result'){
-
-
       if($variables['parameters']['ville'] != 'metropole' and $variables['parameters']['ville'] != 0){
         $req_ville = $variables['libelle_ville'];
       }
@@ -1102,11 +1170,9 @@ function theme_api_emploi_paragraph($variables) {
     $output .= "<table>
     <tr>
             <th>Date</th>
-            <th>Désignation</th>
+            <th>Offre</th>
             <th>Ville</th>
-            <th>Entreprise</th>
             <th>Description</th>
-            <th>Lien</th>
     </tr>";
     foreach($variables['offres'] as $o){
         $output .= convert_table($o);
