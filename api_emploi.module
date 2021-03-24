@@ -102,6 +102,13 @@ function api_emploi_menu() {
     'type' => MENU_CALLBACK,
     );
 
+    $items['api_emploi_test'] = array(
+      'title' => 'Page de test de la mise en page',
+      'access arguments' => array('access content'),
+      'type' => MENU_CALLBACK, 
+      'page callback' => 'api_emploi_test',
+    );
+
 
   return $items; 
 }
@@ -286,7 +293,7 @@ function extract_Json($url){
 function liste_ville(){
 
   $ville = array(
-    00000 => "Métropole de Montpellier",
+    0 => "Métropole de Montpellier",
     34022 => "Baillargues",
     34027 => "Beaulieu",
     34057 => "Castelnau-le-Lez",
@@ -452,67 +459,82 @@ function liste_date(){
 * Formulaire de recherche
 */
 function api_emploi_form(){
+
+  if(isset($_GET['ville'])){$ville = $_GET['ville'];}else{$ville = 0;}
+
   $form['ville'] = array(
   '#title' => 'Choisir une ville de la métropole',
   '#type' => 'select',
   '#options' => liste_ville(),
-  '#default_value' => array(34172 => "montpellier"),
+  '#default_value' => $ville,
   );
+
+  if(isset($_GET['grandDomaine'])){$default_grandDomaine = $_GET['grandDomaine'];}else{$default_grandDomaine = 0;}
 
   $form['domaine'] = array(
   '#title' => 'Choisir un domaine d\'activité',
   '#type' => 'select',
   '#options' => liste_domaines(),
-  '#default_value' => array(0 => "Tous domaines"),
+  '#default_value' => $default_grandDomaine,
   );
+
+  if(isset($_GET['sort'])){$default_sort = $_GET['sort'];}else{$default_sort = 1;}
 
   $form['sort'] = array(
   '#title' => 'Tri des données',
   '#type' => 'select',
   '#options' => liste_tri(),
-  '#default_value' => 1,
+  '#default_value' => $default_sort,
   );
 
+  if(isset($_GET['distance'])){$default_distance = $_GET['distance'];}else{$default_distance = 5;}
   $form['distance'] = array(
   '#title' => 'Distance du rayon de recherche',
   '#type' => 'select',
   '#options' => liste_distance(),
-  '#default_value' => 5,
+  '#default_value' => $default_distance,
   );
+
+  if(isset($_GET['typeContrat'])){$default_typeContrat = $_GET['typeContrat'];}else{$default_typeContrat = 0;}
 
   $form['contrat'] = array(
   '#title' => 'Choisir un type de contrat',
   '#type' => 'select',
   '#options' => liste_contrat(),
-  '#default_value' => array(0 => "Toutes les offres"),
+  '#default_value' => $default_typeContrat,
   );
-      
+  
+  if(isset($_GET['tempsPlein'])){$default_tempsPlein = $_GET['tempsPlein'];}else{$default_tempsPlein = 0;} 
+
   $form['duree'] = array(
   '#title' => 'Choisir une durée hebdomadaire',
   '#type' => 'select',
   '#options' => liste_duree(),
-  '#default_value' => array(0 => "Toutes les offres"),
+  '#default_value' => array(0 => $default_tempsPlein),
   );
-      
+     
+  if(isset($_GET['experience'])){$default_experience = $_GET['experience'];}else{$default_experience = 4;}   
   $form['experience'] = array(
   '#title' => 'Expérience souhaitée',
   '#type' => 'select',
   '#options' => liste_experience(),
-  '#default_value' => array(4 => "Toutes les offres"),
+  '#default_value' => $default_experience,
   );
-      
+    
+  if(isset($_GET['qualification'])){$default_qualification = $_GET['qualification'];}else{$default_qualification = 1;} 
   $form['qualification'] = array(
   '#title' => 'Niveau de qualification',
   '#type' => 'select',
   '#options' => liste_qualification(),
-  '#default_value' => array(1 => "Toutes les offres"),
+  '#default_value' => $default_qualification,
   );
-      
+
+  if(isset($_GET['publieeDepuis'])){$default_publieeDepuis = $_GET['publieeDepuis'];}else{$default_publieeDepuis = 1;}
   $form['date'] = array(
   '#title' => 'Date de publication',
   '#type' => 'select',
   '#options' => liste_date(),
-  '#default_value' => array(1 => "Toutes les offres"),
+  '#default_value' => $default_publieeDepuis,
   );
   
   $form['valider'] = array(
@@ -529,6 +551,8 @@ function api_emploi_form(){
 * Page d'affichage du formulaire de recherche
 */
 function api_emploi_query(){  
+
+
   return drupal_get_form('api_emploi_form');
 }
 
@@ -547,7 +571,9 @@ function api_emploi_form_submit($form, &$form_state){
     'qualification' => $form_state['values']['qualification'],
     'publieeDepuis' => $form_state['values']['date'],
   )));
+
 }
+
 
 
 /**
@@ -555,7 +581,7 @@ function api_emploi_form_submit($form, &$form_state){
 * Ville (code INSEE), domaine (Grand Domaine (liste))
 */
 function url_request_creator(
-  $ville = 'metropole', 
+  $ville = 0, 
   $domaine = '0', 
   $sort = 1,
   $distance = 20, 
@@ -571,7 +597,7 @@ function url_request_creator(
 
       $base_url = variable_get('api_emploi_module_url');
 
-      if($ville == 'metropole')
+      if($ville == 0)
       {
         $criteres = 'commune=34172&distance=25';
       }
@@ -697,7 +723,7 @@ function getoffers($url, $page = 0)
       $query['nombre'] = compter_emploi_ville($extract['filtresPossibles'][0]['agregation']);
 
       $villes = liste_ville();
-      if(isset($url['ville']) and $url['ville'] != 'metropole'){
+      if(isset($url['ville']) and $url['ville'] != 0){
         $query['libelle_ville'] = $villes[$url['ville']];
       }
 
@@ -791,8 +817,8 @@ function extractOffer($offre)
 */
 function api_emploi_result() {
 
-  if($_GET['ville'] == 0){$ville = "metropole";}else{$ville = $_GET['ville'];}
-  if(isset($_GET['grandDomaine'])){$domaine = $_GET['grandDomaine'];}
+  if(isset($_GET['ville'])){$ville = $_GET['ville'];}else{$ville = 0;}
+  if(isset($_GET['grandDomaine'])){$domaine = $_GET['grandDomaine'];}else{$domaine = '0';}
   if(isset($_GET['sort'])){$sort = $_GET['sort'];}else{$sort = 1;}
   if(isset($_GET['distance'])){$distance = $_GET['distance'];}else{$distance = 4;}
   if(isset($_GET['typeContrat'])){$typeContrat = $_GET['typeContrat'];}else{$typeContrat = 0;}
@@ -844,7 +870,7 @@ function api_emploi_saisonnier() {
     $ville = 'metropole', 
     $domaine = '0', 
     $sort = 1,
-    $distance = 20, 
+    $distance = 15, 
     $typeContrat = 'SAI', 
     $tempsPlein = 'X', 
     $experience = 0, 
@@ -859,7 +885,7 @@ function api_emploi_formation(){
     $ville = 'metropole', 
     $domaine = '0', 
     $sort = 1,
-    $distance = 20, 
+    $distance = 15, 
     $typeContrat = 'forma', 
     $tempsPlein = 'X', 
     $experience = 0, 
@@ -950,8 +976,15 @@ function api_emploi_total() {
 }
 
 function url_creator(){
-  $url = '?data=z';
-  if(isset($_GET['page'])){ $url .= '&page=' . $_GET['page']; }else{$url .= '?page=0';}
+
+  $url ='';
+
+
+  if(current_path() == 'api_emploi_one'){
+    $url .='?id=' . $_GET['id'];
+  }
+
+  if(isset($_GET['page'])){ $url .= '&page=' . $_GET['page']; }else{$url .= '&page=0';}
   if(isset($_GET['ville'])){ $url .= '&ville=' . $_GET['ville']; }
   if(isset($_GET['grandDomaine'])){ $url .= '&grandDomaine=' . $_GET['grandDomaine']; }
   if(isset($_GET['sort'])){ $url .= '&sort=' . $_GET['sort'];}
@@ -967,9 +1000,9 @@ function url_creator(){
 
 
  /**
- * Formatage des offres en tableau
+ * Formatage des offres en div
  */
-function convert_table($o){
+function convert_div($o){
 
   $description = substr($o['description'],0,150);
 
@@ -977,31 +1010,36 @@ function convert_table($o){
 
   $pre_date = date_create($o['dateCreation']);
   $date = date_format($pre_date, 'd-m-Y');
+
+
+  $output = '<div class="offre">';
   
-  $output = "<tr>";
-  $output .= "<td>" . $date . "</td>";
-  $output .= '<td><ul style="list-style: none;">';
+  $output .= '<h2 class="offre_titre">'.$o['intitule'].'</h2>';
+
+
   if(!empty($o['entreprise'])){
-    $output .= "<li>" . $o['entreprise'] . "</li>";
+    $output .= '<h3 class="offre_entreprise">'.$o['entreprise'].'</h4>';
   }
+
   
+  $output .= '<ul class="offre_details">';
+  $output .= '<li class="offre_ville">Ville : '.$o['ville'].'</li>';
+  $output .= '<li class="offre_date">Annonce '. $date .'</li>';
+  $output .= '<li class="offre_contrat">'.$o['natureContrat'].' - '.$o['contrat']. '- 2 Mois</li>';
+  
+  
+  
+  $output .= '</ul>';
+  
+  $output .= '<p class="offre_description">' . $description . '(...)</p>';
+  
+  $output .= '<a class="offre_lien" href="api_emploi_one?id=' . $o['id'] . $url .'">Voir l\'offre</a>';
+  
+  $output .= '</div>';
 
-  $output .= "<li>" . $o['intitule'] . "</li>";
-  $output .= "<li>" . $o['natureContrat'] . "</li>";
-  $output .= "<li>" . $o['contrat'] . "</li>";
+  $output .= '<hr />';
 
-  $output .= "</ul></td>";
 
-  /**
-  *
-  *$output .= "<td>" . $o['intitule'] . "</td>";
-  *$output .= "<td>" . $o['natureContrat'] . '<hr />'  . $o['contrat'] . "</td>";
-  *
-
-  **/
-  $output .= "<td>" . $o['ville'] . "</td>";
-  $output .= "<td><p>" . $description . " (...) </p>" .'<a style="margin-top: 5px;" href="api_emploi_one?id=' . $o['id'] . $url .'">Voir l\'offre</a>' . "</td>";
-  $output .= "</tr>";
 
   return $output;
 }
@@ -1109,31 +1147,8 @@ function theme_api_emploi_paragraph($variables) {
         
 
 
-    
-        $output .= '<h4>Votre recherche :</h4>';
         $output .=  '<ul>';
-        $output .=  '<li>Ville : ' . $req_ville . '</li>';
-        if($variables['parameters']['domaine']  != 0){
-          $output .=  '<li>Domaine : ' . $liste_domaines[$variables['parameters']['domaine']] . '</li>';
-        }
-        if($variables['parameters']['typeContrat'] != '0'){
-          $output .=  '<li>Type de contrat : ' . $liste_contrat[$variables['parameters']['typeContrat']] . '</li>';
-        }
-        if($variables['parameters']['tempsPlein'] != 'X'){
-          $output .=  '<li>Durée de travail : ' . $req_tempsPlein . '</li>';
-        }
 
-        if($variables['parameters']['experience'] != 0){
-          $output .=  '<li>Expérience éxigée : ' . $liste_experience[$variables['parameters']['experience']] . '</li>';
-        }
-
-        if($variables['parameters']['qualification'] != 1){
-          $output .=  '<li>Qualification : ' . $liste_qualification[$variables['parameters']['qualification']] . '</li>';
-        }
-
-
-        $output .=  '<li>Trier par : ' . $liste_tri[$variables['parameters']['sort']] . '</li>';
-        $output .=  '<li>Air de recherche : ' . $liste_distance[$variables['parameters']['distance']] . '</li>';
         $output .=  '<li>Nombre d\'offre correspondant à votre recherche : Résultat : <b>' . $variables['parameters']['nombre_offres'] . '</b></li>';
         $output .=  '</ul>';
 
@@ -1141,46 +1156,22 @@ function theme_api_emploi_paragraph($variables) {
     }
 
 
-    if(isset($_GET['page'])){
-      $page = $_GET['page'];
-    }
-    else{
-      $page = 0;
-    }
 
 
-    if($variables['parameters']['nombre_offres'] > 30){
-      $output .= '<ul>';
-      $i = 0;
-      foreach($variables['pagination'] as $p){
-        $output .= '<li  style="display: inline; width = 5px;"><a href="'.$p .'"> ';
-        if($i == $page){ $output .= ' <b>';  }
-        $output .= $i;
-        if($i == $page){ $output .= ' </b>';  }
-        $output .= ' </a></li>';
-        $i++;
+
+  if($variables['parameters']['nombre_offres'] > 30){
+        $output = pagination($variables);
       }
-      $output .= '</ul>'; 
+
+      foreach($variables['offres'] as $o){
+          $output .= convert_div($o);
+      }
+
+      $output .= pagination($variables);
+      
+
     }
-
-
-
-  $output .= '<hr />'; 
-  
-    $output .= "<table>
-    <tr>
-            <th>Date</th>
-            <th>Offre</th>
-            <th>Ville</th>
-            <th>Description</th>
-    </tr>";
-    foreach($variables['offres'] as $o){
-        $output .= convert_table($o);
-    }
-
-    $output .= "</table>";
-    }
-    else{
+  else{
       $output = "Aucune offre dans ces critères";
     }
 
@@ -1188,7 +1179,32 @@ function theme_api_emploi_paragraph($variables) {
   return $output;
 }
 
+function pagination($variables){
 
+  if(isset($_GET['page'])){
+    $page = $_GET['page'];
+  }
+  else{
+    $page = 0;
+  }
+
+
+  $output = '';
+
+    $output .= '<ul class="list>';
+    $i = 0;
+    foreach($variables['pagination'] as $p){
+      $output .= '<li  class="offre_page" style="display: inline; width = 5px;"><a href="'.$p .'"> ';
+      if($i == $page){ $output .= ' <b>';  }
+      $output .= $i;
+      if($i == $page){ $output .= ' </b>';  }
+      $output .= ' </a></li>';
+      $i++;
+    }
+    $output .= '</ul>'; 
+
+    return $output;
+}
 
 
  /**
@@ -1265,6 +1281,8 @@ function theme_api_emploi_one($offre)
 
   return $output;
 }
+
+
 
 
 
