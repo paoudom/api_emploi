@@ -523,7 +523,7 @@ function api_emploi_form(){
   '#default_value' => $default_qualification,
   );
 
-  if(isset($_GET['publieeDepuis'])){$default_publieeDepuis = $_GET['publieeDepuis'];}else{$default_publieeDepuis = 1;}
+  if(isset($_GET['publieeDepuis'])){$default_publieeDepuis = $_GET['publieeDepuis'];}else{$default_publieeDepuis = 0;}
   $form['date'] = array(
   '#title' => 'Date de publication',
   '#type' => 'select',
