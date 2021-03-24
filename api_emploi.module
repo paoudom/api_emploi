@@ -36,8 +36,8 @@ function api_emploi_help($path, $arg) {
  * Pages/routes du module
  */
 function api_emploi_menu() {
-  $items['api_emploi'] = array(
-    'title' => 'Offres d\'emploi Métropole Montpellier',
+  $items['offres-emploi-metropole'] = array(
+    'title' => 'Offres d’emploi Métropole Montpellier',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_content',
@@ -50,29 +50,29 @@ function api_emploi_menu() {
     'page callback' => 'api_emploi_query',
   );
 
-  $items['api_emploi_result'] = array(
-    'title' => 'Résultat de la recherche',
+  $items['offres-emploi'] = array(
+    'title' => 'Offres d\'emploi',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_result',
   );
 
-  $items['api_emploi_saisonnier'] = array(
+  $items['offres-emploi-saisonnier'] = array(
     'title' => 'Offres d\'emploi saisonniers',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_saisonnier',
   );
 
-  $items['api_emploi_formation'] = array(
-    'title' => 'Offres d\'emploi formation/alternance',
+  $items['offres-alternance'] = array(
+    'title' => 'Offres en alternance',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_formation',
   );
 
-  $items['api_emploi_one'] = array(
-    'title' => 'Détails de l\'annonce',
+  $items['offre-emploi'] = array(
+    'title' => 'Détails de l\'offre',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK, 
     'page callback' => 'api_emploi_one',
@@ -102,12 +102,6 @@ function api_emploi_menu() {
     'type' => MENU_CALLBACK,
     );
 
-    $items['api_emploi_test'] = array(
-      'title' => 'Page de test de la mise en page',
-      'access arguments' => array('access content'),
-      'type' => MENU_CALLBACK, 
-      'page callback' => 'api_emploi_test',
-    );
 
 
   return $items; 
@@ -539,7 +533,7 @@ function api_emploi_form(){
   
   $form['valider'] = array(
   '#type' => 'submit',
-  '#value' => t('Soumettre'),
+  '#value' => t('Rechercher'),
   );
 
 
@@ -560,7 +554,7 @@ function api_emploi_query(){
 * Récupération des éléments du formulaire
 */
 function api_emploi_form_submit($form, &$form_state){
-  $form_state['redirect'] = array('api_emploi_result',array('query' => array(
+  $form_state['redirect'] = array('offres-emploi',array('query' => array(
     'ville' => $form_state['values']['ville'], 
     'grandDomaine' => $form_state['values']['domaine'],
     'sort' => $form_state['values']['sort'],
@@ -603,7 +597,7 @@ function url_request_creator(
       }
       else
       {
-        $source = 'api_emploi_result';
+        $source = 'offres-emploi';
         if($ville != 0)
         {
           $criteres = 'commune=' . $ville;
@@ -867,7 +861,7 @@ function api_emploi_content() {
 function api_emploi_saisonnier() {
 
   $request = getoffers(url_request_creator(
-    $ville = 'metropole', 
+    $ville = 0, 
     $domaine = '0', 
     $sort = 1,
     $distance = 15, 
@@ -882,7 +876,7 @@ function api_emploi_saisonnier() {
 
 function api_emploi_formation(){
   $request = getoffers(url_request_creator(
-    $ville = 'metropole', 
+    $ville = 0, 
     $domaine = '0', 
     $sort = 1,
     $distance = 15, 
@@ -950,19 +944,7 @@ function api_emploi_one() {
  */
 function not_found() {
 
-  $output = "Il n'y a aucune offre correspondant à ces critères : <br />";
-  $villes = liste_ville();
-  $domaine = liste_domaines();
-  if($_GET['ville'] = 'metropole' or $_GET['ville'] = 0){
-    $output .= 'Ville : Ensemble de la métropole de montpellier<br />';
-  }
-  else
-  {
-    $output .= "Ville : " . $villes[$_GET['ville']] . '<br />';
-  }
-  
-  $output .= "Domaine : " . $domaine[$_GET['grandDomaine']] . '<br />';
-  $output .= '<a href="api_emploi_query">Faire une nouvelle recherche</a>';
+  $output = "<p>Il n'y a aucune offre correspondant à ces critères. </p>";
 
   return $output;
 }
@@ -980,7 +962,7 @@ function url_creator(){
   $url ='';
 
 
-  if(current_path() == 'api_emploi_one'){
+  if(current_path() == 'offre-emploi'){
     $url .='?id=' . $_GET['id'];
   }
 
@@ -1033,7 +1015,7 @@ function convert_div($o){
   
   $output .= '<p class="offre_description">' . $description . '(...)</p>';
   
-  $output .= '<a class="offre_lien" href="api_emploi_one?id=' . $o['id'] . $url .'">Voir l\'offre</a>';
+  $output .= '<a class="offre_lien" href="offre-emploi?id=' . $o['id'] . $url .'">Voir l\'offre</a>';
   
   $output .= '</div>';
 
@@ -1116,14 +1098,18 @@ function theme_api_emploi_paragraph($variables) {
   { 
     $output = '';
 
-    if($variables['parameters']['base_url'] == 'api_emploi_saisonnier'){
-      $output .=  '<h3>Nombre d\'offre d\'emploi saisonnier sur la métropole : <b>' . $variables['parameters']['nombre_offres'] . '</b></h3>';
+    if($variables['parameters']['base_url'] == 'offres-emploi-saisonnier'){
+      $output .=  '<h3>Nombre d\'offres d\'emplois saisonnier sur la métropole : <b>' . $variables['parameters']['nombre_offres'] . '</b></h3>';
+    }
+
+    if($variables['parameters']['base_url'] == 'offres-alternance'){
+      $output .=  '<h3>Nombre d\'offres de formations et d\'alternances sur la métropole : <b>' . $variables['parameters']['nombre_offres'] . '</b></h3>';
     }
 
 
 
-    if($variables['parameters']['base_url'] == 'api_emploi_result'){
-      if($variables['parameters']['ville'] != 'metropole' and $variables['parameters']['ville'] != 0){
+    if($variables['parameters']['base_url'] == 'offres-emploi'){
+      if($variables['parameters']['ville'] != 0){
         $req_ville = $variables['libelle_ville'];
       }
       else
@@ -1144,23 +1130,19 @@ function theme_api_emploi_paragraph($variables) {
         $liste_experience = liste_experience();
         $liste_qualification = liste_qualification();
 
-        
+
+        if(isset($_GET['ville']) and $_GET['ville'] != 0){
+          $output .=  '<h1 class="titre_resultat">Résultat de votre recherche : </h1>';
+          $output .=  '<p class="nombre_reponses">Nombre d\'offre correspondant à votre recherche : Résultat : <b>' . $variables['parameters']['nombre_offres'] . '</b></p>';
+        }
 
 
-        $output .=  '<ul>';
-
-        $output .=  '<li>Nombre d\'offre correspondant à votre recherche : Résultat : <b>' . $variables['parameters']['nombre_offres'] . '</b></li>';
-        $output .=  '</ul>';
 
 
     }
 
-
-
-
-
   if($variables['parameters']['nombre_offres'] > 30){
-        $output = pagination($variables);
+        $output .= pagination($variables);
       }
 
       foreach($variables['offres'] as $o){
@@ -1191,11 +1173,11 @@ function pagination($variables){
 
   $output = '';
 
-    $output .= '<ul class="list>';
+    $output .= '<ul class="ul_pagination">';
     $i = 0;
     foreach($variables['pagination'] as $p){
-      $output .= '<li  class="offre_page" style="display: inline; width = 5px;"><a href="'.$p .'"> ';
-      if($i == $page){ $output .= ' <b>';  }
+      $output .= '<li  class="li_pagination" style="display: inline;"><a href="'.$p .'"> ';
+      if($i == $page){ $output .= ' <b class="active_pagination">';  }
       $output .= $i;
       if($i == $page){ $output .= ' </b>';  }
       $output .= ' </a></li>';
@@ -1213,53 +1195,53 @@ function pagination($variables){
 function theme_api_emploi_one($offre)
 {
 
-
+dpm($offre);
   $url = $_GET['base_url'] . url_creator();
   $token = getapitoken(token_url_creator());
 
-  $output = '<h1>' . $offre['intitule'] . '</h1>';
+  $output = '<h1  class=""emploi_intitule">' . $offre['intitule'] . '</h1>';
   if(!empty($offre['entreprise']))
   {
-    $output .= '<h2>Entreprise : ' . $offre['entreprise'] .  '</h2>';
+    $output .= '<h2 class="emploi_entreprise">Entreprise : ' . $offre['entreprise'] .  '</h2>';
   }
 
   if(!empty($offre['metier'])){
-    $output .= '<h3>' . $offre['metier'] .  '</h3>';
+    $output .= '<h3 class="emploi_metier">' . $offre['metier'] .  '</h3>';
 
   }
 
-  $output .= '<ul>';
+  $output .= '<ul class="emploi_ul">';
   $date = date_create($offre['dateActualisation']);
-  $output .= '<li>Date de l\'annonce : ' . date_format($date, 'd-m-Y') . '</li>';
+  $output .= '<li class=""emploi_li_date">Date de l\'annonce : ' . date_format($date, 'd-m-Y') . '</li>';
 
-  if(!empty($offre['lieuTravail']))
+  if(!empty($offre['ville']))
   {
-  $output .= '<li> Lieu de travail : ' . $offre['ville'] . '</li>';
+  $output .= '<li class=""emploi_li_ville"> Lieu de travail : ' . $offre['ville'] . '</li>';
   }
 
 
   if(!empty($offre['contrat'])){
-  $output .= '<li>Type de contrat : ' . $offre['natureContrat'] . ' / '  .$offre['contrat'] .'</li>';  
+  $output .= '<li class=""emploi_li_contrat">Type de contrat : ' . $offre['natureContrat'] . ' / '  .$offre['contrat'] .'</li>';  
   }
 
   if(!empty($offre['dureeTravailLibelle'])){
-    $output .= '<li>Durée de travail : ' . $offre['dureeTravailLibelle'] . '</li>';
+    $output .= '<li class=""emploi_li_duree">Durée de travail : ' . $offre['dureeTravailLibelle'] . '</li>';
   }
 
   if(!empty($offre['experience'])){
-    $output .= '<li>Experience requise : ' . $offre['experience'] . '</li>';
+    $output .= '<li class=""emploi_li_experience">Experience requise : ' . $offre['experience'] . '</li>';
   }
 
   if(!empty($offre['salaire'])){
-    $output .= '<li>Salaire : ' . $offre['salaire'] . '</li>';
+    $output .= '<li class=""emploi_li_salaire">Salaire : ' . $offre['salaire'] . '</li>';
   }
 
   $output .= '</ul>';
-  $output .= '<a href="' . $url . '">Retour</a> | ';
-  $output .= '<a href="' . $offre['lien_pe'] . '" target="_blank">Postulez sur le site de Pôle Emploi</a>';
+  $output .= '<a  class=""emploi_lien" href="' . $url . '">Retour</a> | ';
+  $output .= '<a  class=""emploi_lien_pole_emploi" href="' . $offre['lien_pe'] . '" target="_blank">Postulez sur le site de Pôle Emploi</a>';
   $output .= '<hr />';
 
-  $output .= '<p>' . $offre['description'] .'</p>';
+  $output .= '<p class=""emploi_description">' . $offre['description'] .'</p>';
   $output .= '<hr />';
 
   // AFFICHAGE DE LA CARTE GOOGLE MAP (attention API KEY propriétaire)
