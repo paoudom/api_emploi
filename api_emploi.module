@@ -171,7 +171,10 @@ function api_emploi_block_view($delta) {
   switch ($delta) {
     case  'api_emploi_total':
       $block['subject'] = t('Nombre d\'offres d\'emploi sur la métropole de montpellier :');
-      $block['content'] = '<h1>Total : ' . api_emploi_total() .  '</h1>';
+      $block['content'] = '<div class="api-pe-compteur"><div class="api-pe-compteur-before">Il y a actuellement</div>';
+	  $block['content'] .= '<div class="api-pe-compteur-compteur">' . api_emploi_total() . '</div>';
+	  $block['content'] .= '<div class="api-pe-compteur-after">offres d\'emploi sur le territoire de Montpellier Méditerranée Métropole</div>';
+	  $block['content'] .= '</div>';
       return $block;
       break;
     case  'api_emploi_resultat':
